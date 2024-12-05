@@ -1,0 +1,50 @@
+version: '3'
+services:
+  user-service:
+    build: ./microservice1
+    ports:
+      - "3001:3001"
+    networks:
+      - monitoring
+
+  product-service:
+    build: ./microservice2
+    ports:
+      - "3002:3002"
+    networks:
+      - monitoring
+
+  order-service:
+    build: ./microservice3
+    ports:
+      - "3003:3003"
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin 
+
+volumes:
+  grafana-storage:
+
+networks:
+  monitoring:
+    driver: bridge
