@@ -76,19 +76,42 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .catch(err => console.error('Erreur de connexion à MongoDB :', err));
 
 
- 
+  app.get('/orders', async (req, res) => {
+    try {
+      const orders = await Order.find();
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
+    }
+  });
   
   app.post('/orders', async (req, res) => {
     try {
-      const { userId, productId, quantity, discountCode } = req.body;
+      const { userId, productId, quantity } = req.body;
   
       if (!userId || !productId || !quantity) {
         return res.status(400).json({ error: 'Données manquantes ou incorrectes' });
       }
   
+      // Crée la commande sans code de réduction
+      const newOrder = new Order({ userId, productId, quantity });
+      await newOrder.save();
+  
+      res.status(201).json(newOrder);
+    } catch (error) {
+      console.error('Erreur lors de la création de la commande :', error.message);
+      res.status(500).json({ error: 'Erreur lors de la création de la commande', details: error.message });
+    }
+  });
+  
+
+  app.put('/orders/:id', async (req, res) => {
+    try {
+      const { discountCode, ...updateData } = req.body; // Sépare discountCode des autres champs
+  
       let discountValue = 0;
   
-      // Vérifie si un code de réduction est fourni
+      // Si un code de réduction est fourni
       if (discountCode) {
         const discount = await Discount.findOne({ code: discountCode });
   
@@ -102,41 +125,24 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
         }
   
         discountValue = discount.value; // Applique la réduction
+        updateData.discountCode = discountCode; // Ajoute le code à la mise à jour
+        updateData.discountValue = discountValue; // Ajoute la valeur à la mise à jour
       }
   
-      // Crée la commande avec la réduction (si applicable)
-      const newOrder = new Order({ userId, productId, quantity, discountCode, discountValue });
-      await newOrder.save();
+      // Mettre à jour la commande
+      const updatedOrder = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true });
   
-      res.status(201).json(newOrder);
-    } catch (error) {
-      console.error('Erreur lors de la création de la commande :', error.message);
-      res.status(500).json({ error: 'Erreur lors de la création de la commande', details: error.message });
-    }
-  });
+      if (!updatedOrder) {
+        return res.status(404).json({ error: 'Commande non trouvée' });
+      }
   
-  
-  
-
-  app.get('/orders', async (req, res) => {
-    try {
-      const orders = await Order.find();
-      res.json(orders);
-    } catch (error) {
-      res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
-    }
-  });
-
-
-  app.put('/orders/:id', async (req, res) => {
-    try {
-      const updatedOrder = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
-      if (!updatedOrder) return res.status(404).json({ error: 'Commande non trouvée' });
       res.json(updatedOrder);
     } catch (error) {
-      res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande' });
+      console.error('Erreur lors de la mise à jour de la commande :', error.message);
+      res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande', details: error.message });
     }
   });
+  
 
   app.delete('/orders/:id', async (req, res) => {
     try {
