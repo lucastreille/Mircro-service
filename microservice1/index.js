@@ -157,7 +157,7 @@ app.post('/login', (req, res) => {
 app.get('/user', verifyToken, (req, res) => {
   const userId = req.user.id;
 
-  db.query('SELECT uuid, email, nom, prenom FROM users WHERE uuid = ?', [userId], (err, results) => {
+  db.query('SELECT uuid, email, nom, prenom, is_admin FROM users WHERE uuid = ?', [userId], (err, results) => {
     
     if (err) {
       return res.status(500).json({ message: 'Erreur serveur', error: err });
