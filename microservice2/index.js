@@ -1,7 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const Product = require('./models/Product');
+const Product = require('./models/Product.js');
+const verifyToken = require('./middleware/verifyToken.js'); // Middleware pour vérifier le token JWT
+const checkAdmin = require('./middleware/checkAdmin.js');   // Middleware pour vérifier le rôle admin
 
 const app = express();
 const PORT = 3002;
@@ -18,7 +20,7 @@ mongoose.connect('mongodb+srv://mathias:7ZuBXb5YTG6hQ9s2@microservice-product.np
 
 // Routes CRUD
 // CREATE
-app.post('/products', async (req, res) => {
+app.post('/products', verifyToken, checkAdmin, async (req, res) => {
     try {
         const product = new Product(req.body);
         const savedProduct = await product.save();
@@ -64,7 +66,7 @@ app.get('/products/:id', async (req, res) => {
 
 
 // UPDATE
-app.put('/products/:id', async (req, res) => {
+app.put('/products/:id', verifyToken, checkAdmin, async (req, res) => {
     try {
         const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!updatedProduct) return res.status(404).json({ message: 'Product not found' });
@@ -80,7 +82,7 @@ app.put('/products/:id', async (req, res) => {
 
 
 // DELETE
-app.delete('/products/:id', async (req, res) => {
+app.delete('/products/:id', verifyToken, checkAdmin, async (req, res) => {
     try {
         const deletedProduct = await Product.findByIdAndDelete(req.params.id);
         if (!deletedProduct) return res.status(404).json({ message: 'Product not found' });
