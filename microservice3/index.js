@@ -4,6 +4,7 @@ const axios = require('axios');
 const mongoose = require('mongoose');
 const Order = require('./models/order');
 const app = express();
+const verifyToken = require('./middleware'); 
 const PORT = 3003;
 
 // Créer un registre pour Prometheus
@@ -76,75 +77,130 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .catch(err => console.error('Erreur de connexion à MongoDB :', err));
 
 
-  app.get('/orders', async (req, res) => {
+  app.get('/orders',verifyToken, async (req, res) => {
     try {
       const orders = await Order.find();
       res.json(orders);
     } catch (error) {
       res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
     }
-  });
-  
-  app.post('/orders', async (req, res) => {
-    try {
-      const { userId, productId, quantity } = req.body;
-  
-      if (!userId || !productId || !quantity) {
-        return res.status(400).json({ error: 'Données manquantes ou incorrectes' });
-      }
-  
-      // Crée la commande sans code de réduction
-      const newOrder = new Order({ userId, productId, quantity });
-      await newOrder.save();
-  
-      res.status(201).json(newOrder);
-    } catch (error) {
-      console.error('Erreur lors de la création de la commande :', error.message);
-      res.status(500).json({ error: 'Erreur lors de la création de la commande', details: error.message });
-    }
-  });
-  
+  }); 
 
-  app.put('/orders/:id', async (req, res) => {
-    try {
-      const { discountCode, ...updateData } = req.body; // Sépare discountCode des autres champs
+
+  app.post('/orders', verifyToken, async (req, res) => {
+      const { productId, quantity } = req.body;
   
-      let discountValue = 0;
-  
-      // Si un code de réduction est fourni
-      if (discountCode) {
-        const discount = await Discount.findOne({ code: discountCode });
-  
-        if (!discount) {
-          return res.status(400).json({ error: 'Code de réduction invalide' });
-        }
-  
-        // Vérifie si le code est expiré
-        if (new Date() > discount.expiryDate) {
-          return res.status(400).json({ error: 'Code de réduction expiré' });
-        }
-  
-        discountValue = discount.value; // Applique la réduction
-        updateData.discountCode = discountCode; // Ajoute le code à la mise à jour
-        updateData.discountValue = discountValue; // Ajoute la valeur à la mise à jour
+      if (!productId || !quantity) {
+          return res.status(400).json({ error: 'Données manquantes ou incorrectes',productId:productId, quantity:quantity });
       }
   
-      // Mettre à jour la commande
-      const updatedOrder = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true });
+      try {
+          // Récupérer le token JWT de la requête
+          const token = req.headers.authorization;
   
-      if (!updatedOrder) {
-        return res.status(404).json({ error: 'Commande non trouvée' });
+          if (!token) {
+              return res.status(403).json({ error: 'Token manquant dans les en-têtes.' });
+          }
+  
+          // Appeler l'API m1 pour récupérer les informations utilisateur
+          const response = await axios.get('http://mircro-service-user-service-1:3001/user', {
+              headers: {
+                  Authorization: token, // Transmettre le token dans les en-têtes
+              },
+          });
+          const user = response.data.user;
+  
+          if (!user) {
+              return res.status(404).json({ error: 'Utilisateur non trouvé dans m1.' });
+          }
+          // Appeler Microservice 2 pour récupérer les informations sur le produit
+        const productResponse = await axios.get(`http://mircro-service-product-service-1:3002/products/${productId}`);
+        const product = productResponse.data;
+
+        if (!product) {
+            return res.status(404).json({ error: 'Produit non trouvé dans Microservice 2.' });
+        }
+
+        // Créer la commande avec les informations produit
+        const totalPrice = product.finalPrice * quantity;
+
+        const newOrder = new Order({
+            userId: req.user.id, // ID utilisateur récupéré du token JWT
+            productId,
+            quantity,
+            totalPrice,
+        });
+
+        await newOrder.save();
+  
+          res.status(201).json({
+              message: 'Commande créée avec succès.',
+              totalPrice:totalPrice,
+              order: newOrder,
+              user,
+          });
+      } catch (error) {
+        console.error('Erreur lors de la création de la commande :', error.message);
+        console.error('Détails complets de l\'erreur :', error.response?.data || error);
+        res.status(500).json({ error: 'Erreur lors de la récupération de l\'utilisateur ou de la création de la commande', details: error.message });
+        
       }
-  
-      res.json(updatedOrder);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la commande :', error.message);
-      res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande', details: error.message });
-    }
   });
   
+  app.put('/orders/:id', verifyToken, async (req, res) => {
+    try {
+        const { discountCode, ...updateData } = req.body; // Sépare discountCode des autres champs
 
-  app.delete('/orders/:id', async (req, res) => {
+        let discountValue = 0;
+
+        // Récupérer la commande actuelle
+        const currentOrder = await Order.findById(req.params.id);
+        if (!currentOrder) {
+            return res.status(404).json({ error: 'Commande non trouvée' });
+        }
+
+        let finalPrice = currentOrder.totalPrice; // Prix actuel avant modification
+
+        // Si un code de réduction est fourni
+        if (discountCode) {
+            const discount = await Discount.findOne({ code: discountCode });
+
+            if (!discount) {
+                return res.status(400).json({ error: 'Code de réduction invalide' });
+            }
+
+            // Vérifie si le code est expiré
+            if (new Date() > discount.expiryDate) {
+                return res.status(400).json({ error: 'Code de réduction expiré' });
+            }
+
+            // Calculer la valeur de la réduction (en pourcentage)
+            discountValue = discount.value; // Par exemple, 10 pour 10%
+            finalPrice = finalPrice - (finalPrice * discountValue) / 100; // Appliquer la réduction
+        }
+
+        // Ajouter les champs liés à la réduction dans les données mises à jour
+        updateData.discountCode = discountCode || currentOrder.discountCode; // Conserver le code précédent s'il n'est pas modifié
+        updateData.discountValue = discountValue; // La valeur de la réduction
+        updateData.totalPrice = finalPrice; // Mettre à jour le prix final
+        
+
+        // Mettre à jour la commande
+        const updatedOrder = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+        if (!updatedOrder) {
+            return res.status(404).json({ error: 'Commande non trouvée' });
+        }
+        
+        res.json(updatedOrder);
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour de la commande :', error.message);
+        res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande', details: error.message });
+    }
+});
+
+
+  app.delete('/orders/:id',verifyToken, async (req, res) => {
     try {
       const deletedOrder = await Order.findByIdAndDelete(req.params.id);
       if (!deletedOrder) return res.status(404).json({ error: 'Commande non trouvée' });
