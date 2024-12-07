@@ -1,48 +1,94 @@
 const express = require('express');
-const client = require('prom-client');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const Product = require('./models/Product');
+
 const app = express();
 const PORT = 3002;
 
-// Créer un registre pour Prometheus
-const register = new client.Registry();
+// Middleware
+app.use(bodyParser.json());
 
-// Créer un compteur de requêtes HTTP
-const httpRequestCounter = new client.Counter({
-  name: 'http_requests_total',
-  help: 'Total des requêtes HTTP',
-  labelNames: ['method', 'path', 'status']
+// Connexion à MongoDB (Remplace <cluster-uri> par ton URI MongoDB)
+mongoose.connect('mongodb+srv://mathias:7ZuBXb5YTG6hQ9s2@microservice-product.npvcz.mongodb.net/?retryWrites=true&w=majority&appName=Microservice-product', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => console.log('MongoDB connected!'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Routes CRUD
+// CREATE
+app.post('/products', async (req, res) => {
+    try {
+        const product = new Product(req.body);
+        const savedProduct = await product.save();
+
+        res.status(201).json({
+            ...savedProduct.toObject(),
+            finalPrice: savedProduct.getFinalPrice() // Prix final calculé
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
 });
 
-// Ajouter le compteur au registre
-register.registerMetric(httpRequestCounter);
 
-// Middleware pour collecter les métriques sur chaque requête
-app.use((req, res, next) => {
-  res.on('finish', () => {
-    httpRequestCounter.inc({
-      method: req.method,
-      path: req.path,
-      status: res.statusCode
-    });
-  });
-  next();
+// READ ALL
+app.get('/products', async (req, res) => {
+    try {
+        const products = await Product.find();
+        const result = products.map(product => ({
+            ...product.toObject(),
+            finalPrice: product.getFinalPrice() // Prix final calculé
+        }));
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-// Route principale
-app.get('/products', (req, res) => {
-  res.json([
-    { id: 1, name: 'Laptop', price: 1000 },
-    { id: 2, name: 'Phone', price: 500 }
-  ]);
+// READ ONE
+app.get('/products/:id', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ message: 'Product not found' });
+
+        res.status(200).json({
+            ...product.toObject(),
+            finalPrice: product.getFinalPrice() // Prix final calculé
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-// Exposer les métriques sur /metrics
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
+
+// UPDATE
+app.put('/products/:id', async (req, res) => {
+    try {
+        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedProduct) return res.status(404).json({ message: 'Product not found' });
+
+        res.status(200).json({
+            ...updatedProduct.toObject(),
+            finalPrice: updatedProduct.getFinalPrice() // Prix final calculé
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
 });
 
-// Démarrer le serveur
-app.listen(PORT, () => {
-  console.log(`Product Service running on http://localhost:${PORT}`);
+
+// DELETE
+app.delete('/products/:id', async (req, res) => {
+    try {
+        const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+        if (!deletedProduct) return res.status(404).json({ message: 'Product not found' });
+        res.status(200).json({ message: 'Product deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
+
+// Lancement du serveur
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
