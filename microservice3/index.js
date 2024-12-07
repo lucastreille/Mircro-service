@@ -50,7 +50,7 @@ app.get('/orders-with-details', async (req, res) => {
 
     res.json(orders);
   } catch (error) {
-    res.status(500).json({ error: 'Erreur lors de la récupération des données' });
+    res.status(500).json({ error: 'Erreur lors de la récupération des données.' });
   }
 });
 
