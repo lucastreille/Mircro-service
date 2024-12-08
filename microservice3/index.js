@@ -77,75 +77,88 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .catch(err => console.error('Erreur de connexion à MongoDB :', err));
 
 
-  app.get('/orders',verifyToken, async (req, res) => {
+  app.get('/orders', verifyToken, async (req, res) => {
     try {
       const orders = await Order.find();
       res.json(orders);
     } catch (error) {
       res.status(500).json({ error: 'Erreur lors de la récupération des commandes' });
     }
-  }); 
-
+  });
+  
 
   app.post('/orders', verifyToken, async (req, res) => {
-      const { productId, quantity } = req.body;
+    const { products } = req.body;
+    console.log('Utilisateur connecté :', req.user);
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ error: 'La commande doit contenir au moins un produit.' });
+    }
   
-      if (!productId || !quantity) {
-          return res.status(400).json({ error: 'Données manquantes ou incorrectes',productId:productId, quantity:quantity });
+    try {
+      // Récupérer le token JWT de la requête
+      const token = req.headers.authorization;
+  
+      if (!token) {
+        return res.status(403).json({ error: 'Token manquant dans les en-têtes.' });
       }
   
-      try {
-          // Récupérer le token JWT de la requête
-          const token = req.headers.authorization;
+      // Appeler le microservice des utilisateurs pour récupérer l'utilisateur
+      const response = await axios.get('http://mircro-service-user-service-1:3001/user', {
+        headers: {
+          Authorization: token, // Transmettre le token dans les en-têtes
+        },
+      });
+      const user = response.data.user;
+      
+      if (!user) {
+        return res.status(404).json({ error: 'Utilisateur non trouvé dans m1.' });
+      }
   
-          if (!token) {
-              return res.status(403).json({ error: 'Token manquant dans les en-têtes.' });
-          }
+      let totalPrice = 0;
+      const productDetails = [];
   
-          // Appeler l'API m1 pour récupérer les informations utilisateur
-          const response = await axios.get('http://mircro-service-user-service-1:3001/user', {
-              headers: {
-                  Authorization: token, // Transmettre le token dans les en-têtes
-              },
-          });
-          const user = response.data.user;
+      // Récupérer les détails de chaque produit et calculer le prix total
+      for (const item of products) {
+        const { productId, quantity } = item;
   
-          if (!user) {
-              return res.status(404).json({ error: 'Utilisateur non trouvé dans m1.' });
-          }
-          // Appeler Microservice 2 pour récupérer les informations sur le produit
+        // Valider les données de chaque produit
+        if (!productId || !quantity || quantity <= 0) {
+          return res.status(400).json({ error: `Produit invalide : ${JSON.stringify(item)}` });
+        }
+  
+        // Appeler le microservice des produits pour récupérer les informations
         const productResponse = await axios.get(`http://mircro-service-product-service-1:3002/products/${productId}`);
         const product = productResponse.data;
-
-        if (!product) {
-            return res.status(404).json({ error: 'Produit non trouvé dans Microservice 2.' });
-        }
-
-        // Créer la commande avec les informations produit
-        const totalPrice = product.finalPrice * quantity;
-
-        const newOrder = new Order({
-            userId: req.user.id, // ID utilisateur récupéré du token JWT
-            productId,
-            quantity,
-            totalPrice,
-        });
-
-        await newOrder.save();
   
-          res.status(201).json({
-              message: 'Commande créée avec succès.',
-              totalPrice:totalPrice,
-              order: newOrder,
-              user,
-          });
-      } catch (error) {
-        console.error('Erreur lors de la création de la commande :', error.message);
-        console.error('Détails complets de l\'erreur :', error.response?.data || error);
-        res.status(500).json({ error: 'Erreur lors de la récupération de l\'utilisateur ou de la création de la commande', details: error.message });
-        
+        if (!product) {
+          return res.status(404).json({ error: `Produit non trouvé : ${productId}` });
+        }
+  
+        // Ajouter les détails du produit et calculer le total
+        const price = product.finalPrice; // Prix unitaire
+        productDetails.push({ productId, quantity, price });
+        totalPrice += price * quantity;
       }
+  
+      // Créer la commande
+      const newOrder = new Order({
+        userId: req.user.id,
+        products: productDetails,
+        totalPrice,
+      });
+  
+      await newOrder.save();
+  
+      res.status(201).json({
+        message: 'Commande créée avec succès.',
+        order: newOrder,
+      });
+    } catch (error) {
+      console.error('Erreur lors de la création de la commande :', error.message);
+      res.status(500).json({ error: 'Erreur lors de la création de la commande', details: error.message });
+    }
   });
+  
   
   app.put('/orders/:id', verifyToken, async (req, res) => {
     try {
