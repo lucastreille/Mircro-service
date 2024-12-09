@@ -186,8 +186,9 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     try {
       const deletedOrder = await Order.findByIdAndDelete(req.params.id);
       if (!deletedOrder) return res.status(404).json({ error: 'Commande non trouvée' });
-      
-
+      if (deletedOrder.status === 'validated') {
+        return res.status(403).json({ error: 'Impossible de supprimer une commande validée' });
+      }
       res.json({ message: 'Commande supprimée avec succès' });
     } catch (error) {
       res.status(500).json({ error: 'Erreur lors de la suppression de la commande' });
