@@ -39,10 +39,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Démarrer le serveur
-app.listen(PORT, () => {
-  console.log(`Order Service running on http://localhost:${PORT}`);
-});
 
 // Connexion à MongoDB Atlas
 const mongoURI = 'mongodb+srv://dali19:Z.d18082023@cluster0.aom28.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
