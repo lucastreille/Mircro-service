@@ -6,6 +6,8 @@ services:
       - "3001:3001"
     networks:
       - monitoring
+    depends_on:
+      - rabbitmq  # Dépendance à RabbitMQ
 
   product-service:
     build: ./microservice2
@@ -13,6 +15,8 @@ services:
       - "3002:3002"
     networks:
       - monitoring
+    depends_on:
+      - rabbitmq  # Dépendance à RabbitMQ
 
   order-service:
     build: ./microservice3
@@ -20,6 +24,8 @@ services:
       - "3003:3003"
     networks:
       - monitoring
+    depends_on:
+      - rabbitmq  # Dépendance à RabbitMQ
 
   prometheus:
     image: prom/prometheus
@@ -40,7 +46,15 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin 
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  rabbitmq:
+    image: "rabbitmq:management"
+    ports:
+      - "15672:15672"  # Interface de gestion RabbitMQ
+      - "5672:5672"    # Port de communication RabbitMQ
+    networks:
+      - monitoring
 
 volumes:
   grafana-storage:

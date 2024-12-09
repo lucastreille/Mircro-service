@@ -9,6 +9,7 @@ app.use(express.json());
 const client = require('prom-client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const amqp = require('amqplib');
 
 const db = require('./bdd.js');
 const verifyToken = require('./middleware'); 
@@ -39,6 +40,55 @@ app.use((req, res, next) => {
   });
   next();
 });
+
+
+
+
+// Fonction pour se connecter à RabbitMQ
+async function connectToRabbitMQ() {
+  let connection = null;
+  let retries = 5;
+  
+  while (retries > 0) {
+    try {
+      connection = await amqp.connect('amqp://rabbitmq'); 
+      console.log('Connexion à RabbitMQ réussie');
+      return connection;
+    } catch (error) {
+      retries -= 1;
+      console.error(`Erreur de connexion à RabbitMQ, réessayer (${retries} essais restants)...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));  // Attente avant de réessayer
+    }
+  }
+
+  throw new Error('Impossible de se connecter à RabbitMQ après plusieurs tentatives.');
+}
+
+// Fonction pour écouter les messages de la queue "product_created"
+async function listenForProductCreation() {
+  try {
+    const connection = await connectToRabbitMQ();  // Assurez-vous que la connexion est établie
+    const channel = await connection.createChannel();  // Créez un canal pour RabbitMQ
+    const queue = 'product_created';  // Le nom de la queue à écouter
+
+    await channel.assertQueue(queue);  // Vérifiez si la queue existe
+    console.log('En attente de messages sur la queue "product_created"');
+
+    // Consommer les messages de la queue
+    channel.consume(queue, (msg) => {
+      if (msg !== null) {
+        console.log(`Message reçu : ${msg.content.toString()}`);
+        channel.ack(msg);  // Accuse réception du message
+      }
+    });
+  } catch (err) {
+    console.error('Erreur dans l\'écoute de la queue RabbitMQ:', err);
+  }
+}
+
+// Appeler la fonction pour écouter les messages
+listenForProductCreation();
+
 
 
 
