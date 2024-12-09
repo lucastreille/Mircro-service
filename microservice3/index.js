@@ -39,17 +39,10 @@ app.use((req, res, next) => {
   next();
 });
 
-
-// Exposer les métriques sur /metrics
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
+// Démarrer le serveur
+app.listen(PORT, () => {
+  console.log(`Order Service running on http://localhost:${PORT}`);
 });
-
-
-
-
-
 
 // Connexion à MongoDB Atlas
 const mongoURI = 'mongodb+srv://dali19:Z.d18082023@cluster0.aom28.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
@@ -199,6 +192,9 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     try {
       const deletedOrder = await Order.findByIdAndDelete(req.params.id);
       if (!deletedOrder) return res.status(404).json({ error: 'Commande non trouvée' });
+      if (deletedOrder.status === 'validated') {
+        return res.status(403).json({ error: 'Impossible de supprimer une commande validée' });
+      }
       res.json({ message: 'Commande supprimée avec succès' });
     } catch (error) {
       res.status(500).json({ error: 'Erreur lors de la suppression de la commande' });
