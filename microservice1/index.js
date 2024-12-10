@@ -93,12 +93,11 @@ listenForProductCreation();
 
 
 app.get('/users', async (req, res) => {
-
   try {
 
     db.query('SELECT * FROM users ', async (err, results) => {
       
-      return res.status(201).json({ message: 'Utilisateur enregistré avec succès.', results });
+      return res.status(201).json({ message: 'Liste des utilisateurs :', results });
 
     });
 
