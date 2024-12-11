@@ -7,12 +7,6 @@ const app = express();
 const verifyToken = require('./middleware'); 
 const PORT = 3003;
 
-
-
-
-
-
-
 // Créer un registre pour Prometheus
 const register = new client.Registry();
 
@@ -39,6 +33,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Démarrer le serveur
+app.listen(PORT, () => {
+  console.log(`Order Service running on http://localhost:${PORT}`);
+});
 
 // Connexion à MongoDB Atlas
 const mongoURI = 'mongodb+srv://dali19:Z.d18082023@cluster0.aom28.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
@@ -142,6 +140,10 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
         if (!currentOrder) {
             return res.status(404).json({ error: 'Commande non trouvée' });
         }
+        // Vérifier si un code de réduction a déjà été appliqué
+        if (currentOrder.discountCode) {
+          return res.status(400).json({ error: 'Un code de réduction a déjà été appliqué à cette commande' });
+      }
 
         let finalPrice = currentOrder.totalPrice; // Prix actuel avant modification
 
@@ -152,7 +154,7 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
             if (!discount) {
                 return res.status(400).json({ error: 'Code de réduction invalide' });
             }
-
+            
             // Vérifie si le code est expiré
             if (new Date() > discount.expiryDate) {
                 return res.status(400).json({ error: 'Code de réduction expiré' });
@@ -182,6 +184,66 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
         res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande', details: error.message });
     }
 });
+
+app.put('/orders/modifqtt/:id', verifyToken, async (req, res) => {
+  try {
+    const { products } = req.body; // Attendre un tableau de produits à modifier
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ error: 'Doit contenir au moins un produit à modifier.' });
+    }
+
+    // Récupérer la commande actuelle
+    const currentOrder = await Order.findById(req.params.id);
+    if (!currentOrder) {
+      return res.status(404).json({ error: 'Commande non trouvée' });
+    }
+
+    let totalPrice = 0; // Initialiser le totalPrice à 0
+
+    // Traiter chaque produit dans le tableau de produits envoyé
+    for (const { productId, quantity } of products) {
+      if (!productId || quantity <= 0) {
+        return res.status(400).json({ error: `Quantité ou ID de produit invalide pour le produit ${productId}` });
+      }
+
+      // Trouver le produit spécifié dans la commande
+      const productToUpdate = currentOrder.products.find(p => p.productId.toString() === productId);
+      if (!productToUpdate) {
+        return res.status(404).json({ error: `Produit avec ID ${productId} non trouvé dans la commande` });
+      }
+
+      // Mettre à jour la quantité du produit spécifié
+      productToUpdate.quantity = quantity;
+
+      // Récupérer le prix unitaire du produit à partir du microservice produit
+      const productResponse = await axios.get(`http://mircro-service-product-service-1:3002/products/${productId}`);
+      const product = productResponse.data;
+      if (!product) {
+        return res.status(404).json({ error: `Produit avec ID ${productId} non trouvé dans le service produit` });
+      }
+
+      // Recalculer le prix pour ce produit
+      const newPrice = product.finalPrice * quantity;
+      productToUpdate.price = newPrice; // Mettre à jour le prix du produit dans la commande
+    }
+
+    // Recalculer le prix total de la commande après modification de tous les produits
+    // On additionne tous les produits (modifiés et non modifiés) pour obtenir le prix total
+    totalPrice = currentOrder.products.reduce((acc, product) => acc + product.price, 0);
+
+    // Mettre à jour le prix total de la commande
+    currentOrder.totalPrice = totalPrice;
+
+    // Sauvegarder la commande mise à jour
+    await currentOrder.save();
+
+    res.json(currentOrder); // Retourner la commande mise à jour
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la commande :', error.message);
+    res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande', details: error.message });
+  }
+});
+
 
 
   app.delete('/orders/:id',verifyToken, async (req, res) => {
@@ -214,20 +276,4 @@ app.post('/discounts', async (req, res) => {
     console.error('Erreur lors de la création du code de réduction :', error);
     res.status(500).json({ error: 'Erreur lors de la création du code de réduction' });
   }
-});
-
-
-
-
-
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
-
-
-
-// Démarrer le serveur
-app.listen(PORT, () => {
-  console.log(`Order Service running on http://localhost:${PORT}`);
 });
