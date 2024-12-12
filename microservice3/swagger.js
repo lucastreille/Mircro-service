@@ -68,7 +68,7 @@
  * @swagger
  * /discounts:
  *   post:
- *     summary: Crée un nouveau code de réduction
+ *     summary: Crée un nouveau code de réduction Endpoint = /discounts Token requis = Oui
  *     tags: [Réductions]
  *     requestBody:
  *       required: true
@@ -89,7 +89,7 @@
  * @swagger
  * /orders:
  *   post:
- *     summary: Crée une nouvelle commande
+ *     summary: Crée une nouvelle commande Endpoint = /orders Token requis = Oui
  *     tags: [Commandes]
  *     requestBody:
  *       required: true
@@ -110,7 +110,7 @@
  * @swagger
  * /orders:
  *   get:
- *     summary: Récupère la liste de toutes les commandes
+ *     summary: Récupère la liste de toutes les commandes Endpoint = /orders/:uuid Token requis = Oui
  *     tags: [Commandes]
  *     responses:
  *       200:
@@ -127,7 +127,7 @@
  * @swagger
  * /orders/{id}:
  *   put:
- *     summary: Met à jour une commande existante
+ *     summary: Met à jour une commande existante Endpoint = /orders/:uuid Token requis = Oui
  *     tags: [Commandes]
  *     parameters:
  *       - in: path
@@ -151,7 +151,7 @@
  * @swagger
  * /orders/{id}:
  *   delete:
- *     summary: Supprime une commande
+ *     summary: Supprime une commande Endpoint = /orders/:uuid Token requis = Oui
  *     tags: [Commandes]
  *     parameters:
  *       - in: path

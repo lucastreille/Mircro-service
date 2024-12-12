@@ -38,7 +38,7 @@
  * @swagger
  * /users:
  *   post:
- *     summary: Crée un nouvel utilisateur
+ *     summary: Crée un nouvel utilisateur Endpoint : /register Token requis : Non
  *     tags: [Utilisateurs]
  *     requestBody:
  *       required: true
@@ -59,7 +59,7 @@
  * @swagger
  * /users:
  *   get:
- *     summary: Récupère la liste de tous les utilisateurs
+ *     summary: Récupère la liste de tous les utilisateurs Endpoint = /Users Token requis = Non
  *     tags: [Utilisateurs]
  *     responses:
  *       200:
@@ -76,7 +76,7 @@
  * @swagger
  * /users/{uuid}:
  *   get:
- *     summary: Récupère un utilisateur par son UUID
+ *     summary: Récupère un utilisateur par son UUID Endpoint = /Users/:uuid Token requis = Oui
  *     tags: [Utilisateurs]
  *     parameters:
  *       - in: path
@@ -100,7 +100,7 @@
  * @swagger
  * /users/{uuid}:
  *   put:
- *     summary: Met à jour les informations d'un utilisateur
+ *     summary: Met à jour les informations d'un utilisateur Endpoint = /Users/:uuid Token requis = Oui
  *     tags: [Utilisateurs]
  *     parameters:
  *       - in: path
@@ -124,7 +124,7 @@
  * @swagger
  * /users/{uuid}:
  *   delete:
- *     summary: Supprime un utilisateur
+ *     summary: Supprime un utilisateur Endpoint = /Users/:uuid Token requis = Oui
  *     tags: [Utilisateurs]
  *     parameters:
  *       - in: path

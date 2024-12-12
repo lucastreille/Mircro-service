@@ -41,7 +41,7 @@
  * @swagger
  * /products:
  *   post:
- *     summary: Crée un nouveau produit
+ *     summary: Crée un nouveau produit Endpoint = /products Token requis = Oui
  *     tags: [Produits]
  *     security:
  *       - bearerAuth: []
@@ -64,7 +64,7 @@
  * @swagger
  * /products:
  *   get:
- *     summary: Récupère la liste de tous les produits
+ *     summary: Récupère la liste de tous les produits Endpoint = /products Token requis = Non
  *     tags: [Produits]
  *     responses:
  *       200:
@@ -81,7 +81,7 @@
  * @swagger
  * /products/{id}:
  *   get:
- *     summary: Récupère un produit par son ID
+ *     summary: Récupère un produit par son ID Endpoint = /products/:uuid Token requis = Non
  *     tags: [Produits]
  *     parameters:
  *       - in: path
@@ -105,7 +105,7 @@
  * @swagger
  * /products/{id}:
  *   put:
- *     summary: Met à jour un produit existant
+ *     summary: Met à jour un produit existant Endpoint = /products/:uuid Token requis = Oui
  *     tags: [Produits]
  *     security:
  *       - bearerAuth: []
@@ -131,7 +131,7 @@
  * @swagger
  * /products/{id}:
  *   delete:
- *     summary: Supprime un produit
+ *     summary: Supprime un produit Endpoint = /products/:uuid Token requis = Oui
  *     tags: [Produits]
  *     security:
  *       - bearerAuth: []
