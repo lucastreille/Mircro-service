@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const Order = require('./models/order');
 const app = express();
 const verifyToken = require('./middleware'); 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swaggerConfig');
 const PORT = 3003;
 
 const register = new client.Registry();
@@ -18,6 +20,10 @@ const httpRequestCounter = new client.Counter({
 register.registerMetric(httpRequestCounter);
 
 app.use(express.json());
+
+// Route pour Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.use((req, res, next) => {
   res.on('finish', () => {
     httpRequestCounter.inc({

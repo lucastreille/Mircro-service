@@ -1,23 +1,23 @@
 
 const { v4: uuidv4 } = require('uuid');  
-
 const express = require('express');
 const app = express();
-app.use(express.json());
-
-
 const client = require('prom-client');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const amqp = require('amqplib');
-
 const db = require('./bdd.js');
 const verifyToken = require('./middleware'); 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swaggerConfig');
+
+app.use(express.json());
+
+// Route pour Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const PORT = 3001;
 const JWT_SECRET = 'vaV4RRCQLpV4IgFew1R08QQvet0b716wzP0W24DDgI2tObYdQYMY9fbikHzL1Pfz';
-
-
 
 const register = new client.Registry();
 
