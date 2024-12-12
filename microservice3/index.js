@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const Order = require('./models/order');
 const app = express();
 const verifyToken = require('./middleware'); 
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swaggerConfig');
 const PORT = 3003;
 
 // Créer un registre pour Prometheus
@@ -22,6 +24,10 @@ register.registerMetric(httpRequestCounter);
 
 // Middleware pour collecter les métriques sur chaque requête
 app.use(express.json());
+
+// Route pour Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.use((req, res, next) => {
   res.on('finish', () => {
     httpRequestCounter.inc({

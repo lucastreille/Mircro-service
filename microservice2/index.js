@@ -6,12 +6,12 @@ const Product = require('./models/Product.js');
 const verifyToken = require('./middleware/verifyToken.js'); 
 const checkAdmin = require('./middleware/checkAdmin.js'); 
 const amqp = require('amqplib');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swaggerConfig');
 
 
 const app = express();
 const PORT = 3002;
-
-
 
 // Créer un registre pour Prometheus
 const register = new client.Registry();
@@ -24,12 +24,15 @@ const httpRequestCounter = new client.Counter({
 });
 
 
-
 // Ajouter le compteur au registre
 register.registerMetric(httpRequestCounter);
 
 // Middleware pour collecter les métriques sur chaque requête
 app.use(express.json());
+
+// Route pour Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.use((req, res, next) => {
   res.on('finish', () => {
     httpRequestCounter.inc({
@@ -49,10 +52,6 @@ app.get('/metrics', async (req, res) => {
 });
 
 
-
-
-
-
 app.use(bodyParser.json());
 
 mongoose.connect('mongodb+srv://mathias:7ZuBXb5YTG6hQ9s2@microservice-product.npvcz.mongodb.net/?retryWrites=true&w=majority&appName=Microservice-product', {
@@ -60,10 +59,6 @@ mongoose.connect('mongodb+srv://mathias:7ZuBXb5YTG6hQ9s2@microservice-product.np
     useUnifiedTopology: true
 }).then(() => console.log('MongoDB connected!'))
   .catch(err => console.error('MongoDB connection error:', err));
-
-
-
-  
 
 
 // Fonction pour envoyer un message RabbitMQ
@@ -78,11 +73,6 @@ async function sendMessageToUserService(message) {
     console.log(`Message envoyé à user-service: ${message}`);
     setTimeout(() => connection.close(), 500);
 }
-
-
-
-
-
 
 
 app.post('/products', verifyToken, checkAdmin, async (req, res) => {
@@ -159,14 +149,10 @@ app.delete('/products/:id', verifyToken, checkAdmin, async (req, res) => {
 });
 
 
-
-
-
 app.get('/metrics', async (req, res) => {
     res.set('Content-Type', register.contentType);
     res.end(await register.metrics());
 });
-  
 
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
