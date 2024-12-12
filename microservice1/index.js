@@ -44,7 +44,6 @@ app.use((req, res, next) => {
 
 
 
-// Fonction pour se connecter à RabbitMQ
 async function connectToRabbitMQ() {
   let connection = null;
   let retries = 5;
@@ -57,28 +56,26 @@ async function connectToRabbitMQ() {
     } catch (error) {
       retries -= 1;
       console.error(`Erreur de connexion à RabbitMQ, réessayer (${retries} essais restants)...`);
-      await new Promise(resolve => setTimeout(resolve, 5000));  // Attente avant de réessayer
+      await new Promise(resolve => setTimeout(resolve, 5000)); 
     }
   }
 
   throw new Error('Impossible de se connecter à RabbitMQ après plusieurs tentatives.');
 }
 
-// Fonction pour écouter les messages de la queue "product_created"
 async function listenForProductCreation() {
   try {
-    const connection = await connectToRabbitMQ();  // Assurez-vous que la connexion est établie
-    const channel = await connection.createChannel();  // Créez un canal pour RabbitMQ
-    const queue = 'product_created';  // Le nom de la queue à écouter
+    const connection = await connectToRabbitMQ();
+    const channel = await connection.createChannel(); 
+    const queue = 'product_created'; 
 
-    await channel.assertQueue(queue);  // Vérifiez si la queue existe
+    await channel.assertQueue(queue); 
     console.log('En attente de messages sur la queue "product_created"');
 
-    // Consommer les messages de la queue
     channel.consume(queue, (msg) => {
       if (msg !== null) {
         console.log(`Message reçu : ${msg.content.toString()}`);
-        channel.ack(msg);  // Accuse réception du message
+        channel.ack(msg); 
       }
     });
   } catch (err) {
@@ -86,7 +83,6 @@ async function listenForProductCreation() {
   }
 }
 
-// Appeler la fonction pour écouter les messages
 listenForProductCreation();
 
 

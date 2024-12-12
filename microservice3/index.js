@@ -7,20 +7,16 @@ const app = express();
 const verifyToken = require('./middleware'); 
 const PORT = 3003;
 
-// Créer un registre pour Prometheus
 const register = new client.Registry();
 
-// Créer un compteur de requêtes HTTP
 const httpRequestCounter = new client.Counter({
   name: 'http_requests_total',
   help: 'Total des requêtes HTTP',
   labelNames: ['method', 'path', 'status']
 });
 
-// Ajouter le compteur au registre
 register.registerMetric(httpRequestCounter);
 
-// Middleware pour collecter les métriques sur chaque requête
 app.use(express.json());
 app.use((req, res, next) => {
   res.on('finish', () => {
@@ -33,12 +29,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Démarrer le serveur
 app.listen(PORT, () => {
   console.log(`Order Service running on http://localhost:${PORT}`);
 });
 
-// Connexion à MongoDB Atlas
 const mongoURI = 'mongodb+srv://dali19:Z.d18082023@cluster0.aom28.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
@@ -64,17 +58,15 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
     }
   
     try {
-      // Récupérer le token JWT de la requête
       const token = req.headers.authorization;
   
       if (!token) {
         return res.status(403).json({ error: 'Token manquant dans les en-têtes.' });
       }
   
-      // Appeler le microservice des utilisateurs pour récupérer l'utilisateur
       const response = await axios.get('http://mircro-service-user-service-1:3001/user', {
         headers: {
-          Authorization: token, // Transmettre le token dans les en-têtes
+          Authorization: token, 
         },
       });
       const user = response.data.user;
@@ -86,16 +78,13 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
       let totalPrice = 0;
       const productDetails = [];
   
-      // Récupérer les détails de chaque produit et calculer le prix total
       for (const item of products) {
         const { productId, quantity } = item;
   
-        // Valider les données de chaque produit
         if (!productId || !quantity || quantity <= 0) {
           return res.status(400).json({ error: `Produit invalide : ${JSON.stringify(item)}` });
         }
   
-        // Appeler le microservice des produits pour récupérer les informations
         const productResponse = await axios.get(`http://mircro-service-product-service-1:3002/products/${productId}`);
         const product = productResponse.data;
   
@@ -103,13 +92,11 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
           return res.status(404).json({ error: `Produit non trouvé : ${productId}` });
         }
   
-        // Ajouter les détails du produit et calculer le total
         const price = product.finalPrice; // Prix unitaire
         productDetails.push({ productId, quantity, price });
         totalPrice += price * quantity;
       }
   
-      // Créer la commande
       const newOrder = new Order({
         userId: req.user.id,
         products: productDetails,
@@ -131,23 +118,20 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   
   app.put('/orders/:id', verifyToken, async (req, res) => {
     try {
-        const { discountCode, ...updateData } = req.body; // Sépare discountCode des autres champs
+        const { discountCode, ...updateData } = req.body; 
 
         let discountValue = 0;
 
-        // Récupérer la commande actuelle
         const currentOrder = await Order.findById(req.params.id);
         if (!currentOrder) {
             return res.status(404).json({ error: 'Commande non trouvée' });
         }
-        // Vérifier si un code de réduction a déjà été appliqué
         if (currentOrder.discountCode) {
           return res.status(400).json({ error: 'Un code de réduction a déjà été appliqué à cette commande' });
       }
 
-        let finalPrice = currentOrder.totalPrice; // Prix actuel avant modification
+        let finalPrice = currentOrder.totalPrice; 
 
-        // Si un code de réduction est fourni
         if (discountCode) {
             const discount = await Discount.findOne({ code: discountCode });
 
@@ -155,23 +139,19 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
                 return res.status(400).json({ error: 'Code de réduction invalide' });
             }
             
-            // Vérifie si le code est expiré
             if (new Date() > discount.expiryDate) {
                 return res.status(400).json({ error: 'Code de réduction expiré' });
             }
 
-            // Calculer la valeur de la réduction (en pourcentage)
-            discountValue = discount.value; // Par exemple, 10 pour 10%
-            finalPrice = finalPrice - (finalPrice * discountValue) / 100; // Appliquer la réduction
+            discountValue = discount.value; 
+            finalPrice = finalPrice - (finalPrice * discountValue) / 100; 
         }
 
-        // Ajouter les champs liés à la réduction dans les données mises à jour
-        updateData.discountCode = discountCode || currentOrder.discountCode; // Conserver le code précédent s'il n'est pas modifié
-        updateData.discountValue = discountValue; // La valeur de la réduction
-        updateData.totalPrice = finalPrice; // Mettre à jour le prix final
+        updateData.discountCode = discountCode || currentOrder.discountCode;
+        updateData.discountValue = discountValue; 
+        updateData.totalPrice = finalPrice; 
         
 
-        // Mettre à jour la commande
         const updatedOrder = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
         if (!updatedOrder) {
@@ -187,57 +167,47 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 app.put('/orders/modifqtt/:id', verifyToken, async (req, res) => {
   try {
-    const { products } = req.body; // Attendre un tableau de produits à modifier
+    const { products } = req.body; 
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: 'Doit contenir au moins un produit à modifier.' });
     }
 
-    // Récupérer la commande actuelle
     const currentOrder = await Order.findById(req.params.id);
     if (!currentOrder) {
       return res.status(404).json({ error: 'Commande non trouvée' });
     }
 
-    let totalPrice = 0; // Initialiser le totalPrice à 0
+    let totalPrice = 0; 
 
-    // Traiter chaque produit dans le tableau de produits envoyé
     for (const { productId, quantity } of products) {
       if (!productId || quantity <= 0) {
         return res.status(400).json({ error: `Quantité ou ID de produit invalide pour le produit ${productId}` });
       }
 
-      // Trouver le produit spécifié dans la commande
       const productToUpdate = currentOrder.products.find(p => p.productId.toString() === productId);
       if (!productToUpdate) {
         return res.status(404).json({ error: `Produit avec ID ${productId} non trouvé dans la commande` });
       }
 
-      // Mettre à jour la quantité du produit spécifié
       productToUpdate.quantity = quantity;
 
-      // Récupérer le prix unitaire du produit à partir du microservice produit
       const productResponse = await axios.get(`http://mircro-service-product-service-1:3002/products/${productId}`);
       const product = productResponse.data;
       if (!product) {
         return res.status(404).json({ error: `Produit avec ID ${productId} non trouvé dans le service produit` });
       }
 
-      // Recalculer le prix pour ce produit
       const newPrice = product.finalPrice * quantity;
-      productToUpdate.price = newPrice; // Mettre à jour le prix du produit dans la commande
+      productToUpdate.price = newPrice; 
     }
 
-    // Recalculer le prix total de la commande après modification de tous les produits
-    // On additionne tous les produits (modifiés et non modifiés) pour obtenir le prix total
     totalPrice = currentOrder.products.reduce((acc, product) => acc + product.price, 0);
 
-    // Mettre à jour le prix total de la commande
     currentOrder.totalPrice = totalPrice;
 
-    // Sauvegarder la commande mise à jour
     await currentOrder.save();
 
-    res.json(currentOrder); // Retourner la commande mise à jour
+    res.json(currentOrder); 
   } catch (error) {
     console.error('Erreur lors de la mise à jour de la commande :', error.message);
     res.status(500).json({ error: 'Erreur lors de la mise à jour de la commande', details: error.message });
@@ -276,4 +246,10 @@ app.post('/discounts', async (req, res) => {
     console.error('Erreur lors de la création du code de réduction :', error);
     res.status(500).json({ error: 'Erreur lors de la création du code de réduction' });
   }
+});
+
+
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
 });

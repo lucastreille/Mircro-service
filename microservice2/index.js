@@ -13,10 +13,8 @@ const PORT = 3002;
 
 
 
-// Créer un registre pour Prometheus
 const register = new client.Registry();
 
-// Créer un compteur de requêtes HTTP
 const httpRequestCounter = new client.Counter({
   name: 'http_requests_total',
   help: 'Total des requêtes HTTP',
@@ -25,10 +23,8 @@ const httpRequestCounter = new client.Counter({
 
 
 
-// Ajouter le compteur au registre
 register.registerMetric(httpRequestCounter);
 
-// Middleware pour collecter les métriques sur chaque requête
 app.use(express.json());
 app.use((req, res, next) => {
   res.on('finish', () => {
@@ -42,7 +38,6 @@ app.use((req, res, next) => {
 });
 
 
-// Exposer les métriques sur /metrics
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
@@ -90,7 +85,6 @@ app.post('/products', verifyToken, checkAdmin, async (req, res) => {
         const product = new Product(req.body);
         const savedProduct = await product.save();
 
-        // Envoyer un message à user-service pour informer de la création du produit
         const message = `Un nouveau produit a été créé: ${savedProduct.name}`;
         sendMessageToUserService(message);
 
