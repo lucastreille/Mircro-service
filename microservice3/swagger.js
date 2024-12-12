@@ -2,24 +2,67 @@
  * @swagger
  * components:
  *   schemas:
- *     Discount:
+ *     ProductInOrder:
  *       type: object
  *       required:
- *         - code
- *         - value
- *         - expiryDate
+ *         - productId
+ *         - quantity
+ *         - price
  *       properties:
- *         code:
+ *         productId:
  *           type: string
- *           description: Code unique de la réduction
- *         value:
+ *           description: ID unique du produit
+ *           example: "prod123"
+ *         quantity:
  *           type: number
- *           description: Valeur de la réduction en pourcentage
- *         expiryDate:
+ *           description: Quantité commandée
+ *           example: 2
+ *         price:
+ *           type: number
+ *           description: Prix unitaire du produit
+ *           example: 49.99
+ *     Order:
+ *       type: object
+ *       required:
+ *         - userId
+ *         - products
+ *         - totalPrice
+ *       properties:
+ *         userId:
+ *           type: string
+ *           description: ID de l'utilisateur ayant passé la commande
+ *           example: "user123"
+ *         products:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/ProductInOrder'
+ *           description: Liste des produits dans la commande
+ *         totalPrice:
+ *           type: number
+ *           description: Prix total de la commande
+ *           example: 99.99
+ *         status:
+ *           type: string
+ *           description: Statut de la commande
+ *           default: pending
+ *           example: "completed"
+ *         discountCode:
+ *           type: string
+ *           description: Code de réduction appliqué
+ *           default: null
+ *           example: "SAVE10"
+ *         discountValue:
+ *           type: number
+ *           description: Valeur de la réduction appliquée
+ *           default: 0
+ *           example: 10
+ *         createdAt:
  *           type: string
  *           format: date-time
- *           description: Date d'expiration de la réduction
+ *           description: Date de création de la commande
+ *           example: "2023-12-01T12:34:56Z"
  */
+
 
 /**
  * @swagger
@@ -40,124 +83,6 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Discount'
- */
-
-/**
- * @swagger
- * /discounts:
- *   get:
- *     summary: Récupère la liste de tous les codes de réduction
- *     tags: [Réductions]
- *     responses:
- *       200:
- *         description: Liste des codes de réduction
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Discount'
- */
-
-/**
- * @swagger
- * /discounts/{code}:
- *   get:
- *     summary: Récupère un code de réduction par son code
- *     tags: [Réductions]
- *     parameters:
- *       - in: path
- *         name: code
- *         schema:
- *           type: string
- *         required: true
- *         description: Code unique de la réduction
- *     responses:
- *       200:
- *         description: Code de réduction trouvé
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Discount'
- *       404:
- *         description: Code de réduction non trouvé
- */
-
-/**
- * @swagger
- * /discounts/{code}:
- *   delete:
- *     summary: Supprime un code de réduction
- *     tags: [Réductions]
- *     parameters:
- *       - in: path
- *         name: code
- *         schema:
- *           type: string
- *         required: true
- *         description: Code unique de la réduction
- *     responses:
- *       200:
- *         description: Code de réduction supprimé avec succès
- *       404:
- *         description: Code de réduction non trouvé
- */
-
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     ProductInOrder:
- *       type: object
- *       required:
- *         - productId
- *         - quantity
- *         - price
- *       properties:
- *         productId:
- *           type: string
- *           description: ID unique du produit
- *         quantity:
- *           type: number
- *           description: Quantité commandée
- *         price:
- *           type: number
- *           description: Prix unitaire du produit
- *     Order:
- *       type: object
- *       required:
- *         - userId
- *         - products
- *         - totalPrice
- *       properties:
- *         userId:
- *           type: string
- *           description: ID de l'utilisateur ayant passé la commande
- *         products:
- *           type: array
- *           items:
- *             $ref: '#/components/schemas/ProductInOrder'
- *           description: Liste des produits dans la commande
- *         totalPrice:
- *           type: number
- *           description: Prix total de la commande
- *         status:
- *           type: string
- *           description: Statut de la commande (ex: 'pending', 'completed', 'canceled')
- *           default: 'pending'
- *         discountCode:
- *           type: string
- *           description: Code de réduction appliqué (si applicable)
- *           default: null
- *         discountValue:
- *           type: number
- *           description: Valeur de la réduction appliquée
- *           default: 0
- *         createdAt:
- *           type: string
- *           format: date-time
- *           description: Date de création de la commande
  */
 
 /**
@@ -196,30 +121,6 @@
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Order'
- */
-
-/**
- * @swagger
- * /orders/{id}:
- *   get:
- *     summary: Récupère une commande par son ID
- *     tags: [Commandes]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: ID de la commande
- *     responses:
- *       200:
- *         description: Commande trouvée
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Order'
- *       404:
- *         description: Commande non trouvée
  */
 
 /**
