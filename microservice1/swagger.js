@@ -6,26 +6,26 @@
  *       type: object
  *       required:
  *         - uuid
- *         - nom
- *         - prenom
+ *         - name
+ *         - firstname
  *         - email
- *         - mot_de_passe
+ *         - password
  *         - is_admin
  *       properties:
  *         uuid:
  *           type: string
  *           description: L'identifiant unique de l'utilisateur
- *         nom:
+ *         name:
  *           type: string
  *           description: Le nom de l'utilisateur
- *         prenom:
+ *         firstname:
  *           type: string
  *           description: Le prénom de l'utilisateur
  *         email:
  *           type: string
  *           format: email
  *           description: L'adresse email de l'utilisateur
- *         mot_de_passe:
+ *         password:
  *           type: string
  *           description: Le mot de passe de l'utilisateur
  *         is_admin:
@@ -36,9 +36,30 @@
 
 /**
  * @swagger
- * /users:
+ * components:
+ *   schemas:
+ *     Login:
+ *       type: object
+ *       required:
+ *         - email
+ *         - password
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Adresse email de l'utilisateur
+ *           example: "user@example.com"
+ *         password:
+ *           type: string
+ *           description: Mot de passe de l'utilisateur
+ *           example: "securepassword123"
+ */
+
+/**
+ * @swagger
+ * /register:
  *   post:
- *     summary: Crée un nouvel utilisateur Endpoint : /register Token requis : Non
+ *     summary: Crée un nouvel utilisateur Endpoint = /register Token requis = Non
  *     tags: [Utilisateurs]
  *     requestBody:
  *       required: true
@@ -53,6 +74,40 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ */
+
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Connecte un utilisateur avec son email et son mot de passe Endpoint = /login Token requis = Non
+ *     tags: [Utilisateurs]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Login'
+ *     responses:
+ *       200:
+ *         description: Connexion réussie, retourne un token d'authentification
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description : Message de confirmation
+ *                   example : "Connexion réussie"
+ *                 token:
+ *                   type: string
+ *                   description: Token JWT pour authentification
+ *                   example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *       400:
+ *         description: Requête invalide, email ou mot de passe manquant
+ *       401:
+ *         description: Échec de l'authentification, email ou mot de passe incorrect
  */
 
 /**
